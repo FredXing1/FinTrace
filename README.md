@@ -20,6 +20,8 @@ benchmark — every claim traceable to as-filed evidence, zero look-ahead.
 | `pitfall-bench` | Leakage-controlled benchmark: time-gated QA, claim verification, forward estimation |
 | `auditpack` | Open audit-trail schema: claims + evidence chains + execution logs + sign-off |
 
+📄 Technical report (draft): [`reports/technical-report.md`](reports/technical-report.md)
+
 ## Quick start (human developers)
 
 ```bash

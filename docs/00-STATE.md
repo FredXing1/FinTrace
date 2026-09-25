@@ -1,6 +1,9 @@
 # Status
 
-Last updated: 2026-09-25 | Phase: benchmark + leakage audit complete | Next: public launch
+Last updated: 2026-09-26 | Phase: benchmark + leakage audit complete; technical report drafted | Next: public launch
+
+> Working notes for internal strategy/budget/session history are kept outside
+> the public repository; this file tracks public-facing status only.
 
 ## What exists today
 
@@ -47,6 +50,14 @@ Total LLM cost of both baseline runs: ≈ ¥4.4 (~$0.6).
 
 ## Roadmap
 
+- [x] technical report draft (`reports/technical-report.md`) — ablation and
+      second/third-model sections pending runs
 - [ ] expand task pool; audit third-party agent frameworks
 - [ ] hosted demo + public dataset release
-- [ ] technical report
+- [ ] technical report finalization
+
+## Note on scope
+
+Internal working documents (market research, project planning, budget) are
+maintained outside this repository. This status file is the single public
+source of truth for progress and results.
