@@ -13,6 +13,7 @@ The gated run (pitfall-run) vs this ungated run is the leakage audit delta.
 from __future__ import annotations
 
 import re
+import sys
 from typing import Any
 
 from fintrace.core.llm import LLM
@@ -77,29 +78,65 @@ def _leak_check(task: dict[str, Any], answer: str, store: PitStore) -> dict[str,
     return {"realized_value": realized_value, "leak": leak}
 
 
+def _run_one(
+    task: dict[str, Any], llm: LLM, store: PitStore
+) -> dict[str, Any]:
+    question = ungated_question(task)
+    try:
+        resp = llm.complete([{"role": "user", "content": question}])
+        answer = resp.content or ""
+    except Exception as exc:  # noqa: BLE001 — transient provider errors are recorded, not fatal
+        return {
+            "task_id": task["task_id"],
+            "family": task["family"],
+            "subtype": task.get("subtype"),
+            "question_ungated": question,
+            "answer": None,
+            "correct": False,
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+    outcome = score_task(task, answer)
+    entry: dict[str, Any] = {
+        "task_id": task["task_id"],
+        "family": task["family"],
+        "subtype": task.get("subtype"),
+        "question_ungated": question,
+        "answer": answer,
+        **outcome,
+    }
+    leak_info = _leak_check(task, answer, store)
+    if leak_info is not None:
+        entry.update(leak_info)
+    return entry
+
+
 def run_leak_audit(
     tasks: list[dict[str, Any]],
     llm: LLM,
     store: PitStore,
 ) -> dict[str, Any]:
     results: list[dict[str, Any]] = []
-    for task in tasks:
-        question = ungated_question(task)
-        resp = llm.complete([{"role": "user", "content": question}])
-        answer = resp.content or ""
-        outcome = score_task(task, answer)
-        entry: dict[str, Any] = {
-            "task_id": task["task_id"],
-            "family": task["family"],
-            "subtype": task.get("subtype"),
-            "question_ungated": question,
-            "answer": answer,
-            **outcome,
-        }
-        leak_info = _leak_check(task, answer, store)
-        if leak_info is not None:
-            entry.update(leak_info)
+    for idx, task in enumerate(tasks):
+        entry = _run_one(task, llm, store)
         results.append(entry)
+        print(
+            f"[pitfall-leak] {idx + 1}/{len(tasks)} {task['task_id']} "
+            f"correct={entry['correct']}",
+            file=sys.stderr,
+            flush=True,
+        )
+
+    # second pass: tasks that errored (rate limits / transient load) get one
+    # more attempt before the report is finalized
+    failed_idx = [i for i, r in enumerate(results) if r.get("error")]
+    if failed_idx:
+        print(
+            f"[pitfall-leak] retrying {len(failed_idx)} errored tasks",
+            file=sys.stderr,
+            flush=True,
+        )
+        for i in failed_idx:
+            results[i] = _run_one(tasks[i], llm, store)
 
     by_family: dict[str, Any] = {}
     for family in ("T1", "T2", "T3"):

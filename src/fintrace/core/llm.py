@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import time
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -157,11 +158,13 @@ class OpenAICompatLLM:
 
     def _send(self, payload: dict[str, Any]) -> dict[str, Any]:
         last_exc: Exception | None = None
+        resp: httpx.Response | None = None
         for attempt in range(self._max_retries + 1):
             self._limiter.acquire()
             try:
                 resp = self._client.post("/chat/completions", json=payload)
             except httpx.TransportError as exc:
+                resp = None
                 last_exc = exc
                 if attempt < self._max_retries:
                     time.sleep(2.0**attempt)
@@ -169,8 +172,17 @@ class OpenAICompatLLM:
             if resp.status_code not in _RETRYABLE:
                 resp.raise_for_status()
                 return dict(resp.json())
+            last_exc = None
             if attempt < self._max_retries:
                 time.sleep(2.0**attempt)
+        if resp is not None:
+            # final attempt still returned a retryable status: surface it properly
+            print(
+                f"[llm] giving up after {self._max_retries + 1} attempts: "
+                f"{resp.status_code} {resp.text[:200]}",
+                file=sys.stderr,
+            )
+            resp.raise_for_status()
         assert last_exc is not None
         raise last_exc
 

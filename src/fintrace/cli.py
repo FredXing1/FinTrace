@@ -318,7 +318,14 @@ def _cmd_pitfall_leak(args: argparse.Namespace) -> int:
     con = connect()
     try:
         llm: MockLLM | OpenAICompatLLM = (
-            MockLLM([]) if args.mock else OpenAICompatLLM(model=args.model)
+            MockLLM([])
+            if args.mock
+            else OpenAICompatLLM(
+                model=args.model,
+                timeout=600.0,  # thinking models can take minutes per answer
+                rate_per_sec=args.rate,
+                max_retries=8,  # free tiers shed load with 429/1305 under peak
+            )
         )
         report = run_leak_audit(tasks, llm, PitStore(con))
     finally:
@@ -496,6 +503,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--limit", type=int, default=None)
     p.add_argument("--model", default=None)
     p.add_argument("--mock", action="store_true")
+    p.add_argument(
+        "--rate",
+        type=float,
+        default=0.25,
+        help="requests per second (free tiers often cap RPM; 0.25 = 1 call / 4s)",
+    )
     p.add_argument("--gated-report", default=None, help="pitfall-run report to compare against")
     p.add_argument("--out", default=None)
     p.set_defaults(func=_cmd_pitfall_leak)
