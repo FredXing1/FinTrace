@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fintrace.dev/schemas/auditpack-v0.1.json",
+  "title": "FinTrace auditpack",
+  "description": "Auditable output package for a point-in-time research run: conclusion, claim verification, evidence chain, execution log, and human sign-off. Every number in the conclusion must be traceable to evidence that was public at the as_of date.",
+  "type": "object",
+  "required": [
+    "auditpack_version",
+    "run_id",
+    "generated_at",
+    "question",
+    "as_of",
+    "conclusion",
+    "verification",
+    "execution_log",
+    "human_signoff"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "auditpack_version": { "const": "0.1" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "generated_at": { "type": "string" },
+    "question": { "type": "string" },
+    "as_of": { "$ref": "#/$defs/date" },
+    "conclusion": {
+      "type": "object",
+      "required": ["answer"],
+      "additionalProperties": false,
+      "properties": {
+        "answer": { "type": ["string", "null"] }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "required": ["claims", "arithmetic", "summary"],
+      "additionalProperties": false,
+      "properties": {
+        "claims": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/claimVerdict" }
+        },
+        "arithmetic": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/arithmeticCheck" }
+        },
+        "summary": { "$ref": "#/$defs/summary" },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidence" }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/evidence" }
+    },
+    "execution_log": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "human_signoff": { "$ref": "#/$defs/signoff" }
+  },
+  "$defs": {
+    "date": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["accn", "filed", "tag", "period_end", "value", "unit", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "accn": { "type": "string" },
+        "filed": { "$ref": "#/$defs/date" },
+        "form": { "type": ["string", "null"] },
+        "cik": { "type": ["integer", "null"] },
+        "entity": { "type": ["string", "null"] },
+        "tag": { "type": "string" },
+        "period_start": { "type": ["string", "null"] },
+        "period_end": { "type": "string" },
+        "value": { "type": "number" },
+        "unit": { "type": "string" },
+        "source": { "type": "string" }
+      }
+    },
+    "claimVerdict": {
+      "type": "object",
+      "required": ["claim", "value", "verdict"],
+      "additionalProperties": false,
+      "properties": {
+        "claim": { "type": "string" },
+        "value": { "type": "number" },
+        "is_percent": { "type": "boolean" },
+        "verdict": { "enum": ["supported", "unsupported", "leaked"] },
+        "evidence": {
+          "oneOf": [
+            { "$ref": "#/$defs/evidence" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "arithmeticCheck": {
+      "type": "object",
+      "required": ["stated_pct", "status", "ok"],
+      "additionalProperties": false,
+      "properties": {
+        "stated_pct": { "type": "number" },
+        "status": { "enum": ["checked", "not_checkable"] },
+        "ok": { "type": "boolean" },
+        "expected_pct": { "type": ["number", "null"] },
+        "tag": { "type": "string" },
+        "period_from": { "type": "string" },
+        "period_to": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "n_claims",
+        "supported",
+        "unsupported",
+        "leaked",
+        "arithmetic_ok",
+        "time_gated_ok"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "n_claims": { "type": "integer" },
+        "supported": { "type": "integer" },
+        "unsupported": { "type": "integer" },
+        "leaked": { "type": "integer" },
+        "arithmetic_ok": { "type": "boolean" },
+        "time_gated_ok": { "type": "boolean" }
+      }
+    },
+    "signoff": {
+      "type": "object",
+      "required": ["approved"],
+      "additionalProperties": false,
+      "properties": {
+        "approved": { "type": "boolean" },
+        "reviewer": { "type": ["string", "null"] },
+        "signed_at": { "type": ["string", "null"] },
+        "note": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

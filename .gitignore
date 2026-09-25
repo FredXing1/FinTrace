@@ -1,0 +1,27 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+
+# Local data store (never redistribute ingested vendor data; SEC public-domain
+# data is fine to redistribute but the local DuckDB is a build artifact).
+# MUST stay root-anchored: an unanchored `data/` once silently ignored the
+# entire src/fintrace/data/ package and broke CI.
+/data/
+
+# OS
+.DS_Store
+
+# Env
+.env
+
+# Local tool config and private working notes
+AGENTS.md
+CLAUDE.md
+.zcodeignore

@@ -1,0 +1,73 @@
+[project]
+name = "fintrace"
+version = "0.0.1"
+description = "Auditable, point-in-time financial research data layer (FinTrace) — core of the PITfall leakage-controlled benchmark."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Apache-2.0" }
+dependencies = [
+    "duckdb>=1.1",
+    "httpx>=0.27",
+    "pyarrow>=17.0",
+]
+
+[project.scripts]
+fintrace = "fintrace.cli:main"
+
+[dependency-groups]
+dev = [
+    "jsonschema>=4.23",
+    "mypy>=1.11",
+    "pytest>=8.3",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fintrace"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+# Explicit classification: `tests.*` imports resolve differently across
+# environments depending on package detection, which once made CI fail while
+# a stale local cache masked the violations. Never rely on inference here.
+[tool.ruff.lint.isort]
+known-first-party = ["fintrace", "tests"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src", "tests"]
+# src layout: mypy cannot reliably resolve the project package through PEP 660
+# editable installs; point it at the source tree explicitly.
+mypy_path = "src"
+
+[[tool.mypy.overrides]]
+module = "duckdb.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pyarrow.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "jsonschema.*"
+ignore_missing_imports = true
+
+# Tests favor runtime coverage over annotation discipline; fixtures are untyped.
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+warn_unused_ignores = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
