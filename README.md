@@ -5,6 +5,9 @@ benchmark — every claim traceable to as-filed evidence, zero look-ahead.
 
 > ⚠️ Research software under active development. Not investment advice.
 
+🧪 **Live demo** (no sign-up, no API key): [fintrace-demo.streamlit.app](https://fintrace-demo.streamlit.app) —
+pick a company, a metric, and a knowledge cutoff; watch the point-in-time answer vs what a naive live-data API returns.
+
 - 📍 **Status**: baselines complete — 125M as-filed facts, core-200 benchmark
   (T1 92% / T2 93.3% / T3 50%, bootstrap 95% CI), leakage audit showing a naive
   live-data agent answers 82% of "impossible" questions with the true future

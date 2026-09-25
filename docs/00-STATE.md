@@ -53,7 +53,9 @@ Total LLM cost of both baseline runs: ≈ ¥4.4 (~$0.6).
 - [x] technical report draft (`reports/technical-report.md`) — ablation and
       second/third-model sections pending runs
 - [ ] expand task pool; audit third-party agent frameworks
-- [ ] hosted demo + public dataset release
+- [x] hosted demo live: https://fintrace-demo.streamlit.app (zero-LLM time-travel
+      playground over a 28-company subset; AppTest regression suite in CI)
+- [ ] public dataset release (Hugging Face)
 - [ ] technical report finalization
 
 ## Note on scope
