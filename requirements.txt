@@ -1,0 +1,4 @@
+# Runtime deps for the hosted demo (Streamlit Community Cloud).
+# Local development uses pyproject.toml + uv instead.
+streamlit>=1.36
+duckdb>=1.1

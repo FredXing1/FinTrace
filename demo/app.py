@@ -18,7 +18,8 @@ st.set_page_config(
 
 @st.cache_resource
 def db():
-    return duckdb.connect("demo.duckdb", read_only=True)
+    # Streamlit Cloud runs from the repo root; keep the path relative to it.
+    return duckdb.connect("demo/demo.duckdb", read_only=True)
 
 
 con = db()

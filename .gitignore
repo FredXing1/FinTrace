@@ -26,5 +26,4 @@ AGENTS.md
 CLAUDE.md
 .zcodeignore
 
-# Demo build artifact (uploaded to the HF Space separately)
-demo/demo.duckdb
+# demo/demo.duckdb IS tracked on purpose — the hosted demo deploys from this repo.
