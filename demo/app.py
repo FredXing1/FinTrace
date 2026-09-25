@@ -7,6 +7,7 @@ subset of as-filed SEC XBRL facts (star companies) and needs no LLM API.
 from __future__ import annotations
 
 import json
+from datetime import date, timedelta
 
 import duckdb
 import streamlit as st
@@ -64,6 +65,7 @@ periods = [
     ).fetchall()
 ]
 period_end = st.selectbox("Fiscal period ending", periods)
+period_end_date = date.fromisoformat(period_end)
 
 fmin, fmax = con.execute(
     "SELECT MIN(CAST(filed AS DATE)), MAX(CAST(filed AS DATE)) "
@@ -73,18 +75,24 @@ fmin, fmax = con.execute(
 if fmin is None or fmax is None:
     st.info("No filings on record for this selection.")
     st.stop()
+
+# Slider spans [period end, latest filing + 1d]: its left half covers the
+# window where the fact existed as a question but was NOT yet public — the
+# unknown zone is the point, so the user must be able to slide into it.
+slider_min = period_end_date
+slider_max = max(fmax, period_end_date) + timedelta(days=1)
 as_of = st.slider(
     "Knowledge cutoff (as_of)",
-    min_value=fmin,
-    max_value=fmax,
-    value=fmax,
+    min_value=slider_min,
+    max_value=slider_max,
+    value=slider_max,
     format="YYYY-MM-DD",
     key=f"asof-{cik}-{tag}-{period_end}",
     help="Slide left to travel back in time: the answer must only use filings public at this date.",
 )
 
 gated = con.execute(
-    "SELECT val, accn, MAX(CAST(filed AS DATE)) FROM facts "
+    "SELECT val, accn, filed FROM facts "
     "WHERE cik = ? AND tag = ? AND period_end = ? AND CAST(filed AS DATE) <= ? "
     "ORDER BY filed DESC LIMIT 1",
     [cik, tag, period_end, as_of],

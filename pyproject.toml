@@ -20,11 +20,16 @@ dev = [
     "mypy>=1.11",
     "pytest>=8.3",
     "ruff>=0.6",
+    "streamlit>=1.64.0",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[[tool.uv.index]]
+url = "https://mirrors.aliyun.com/pypi/simple/"
+default = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fintrace"]
@@ -63,6 +68,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "jsonschema.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "streamlit.*"
 ignore_missing_imports = true
 
 # Tests favor runtime coverage over annotation discipline; fixtures are untyped.
