@@ -70,12 +70,16 @@ fmin, fmax = con.execute(
     "FROM facts WHERE cik = ? AND tag = ? AND period_end = ?",
     [cik, tag, period_end],
 ).fetchone()
+if fmin is None or fmax is None:
+    st.info("No filings on record for this selection.")
+    st.stop()
 as_of = st.slider(
     "Knowledge cutoff (as_of)",
     min_value=fmin,
     max_value=fmax,
     value=fmax,
     format="YYYY-MM-DD",
+    key=f"asof-{cik}-{tag}-{period_end}",
     help="Slide left to travel back in time: the answer must only use filings public at this date.",
 )
 
