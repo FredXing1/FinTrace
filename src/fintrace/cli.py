@@ -325,6 +325,7 @@ def _cmd_pitfall_leak(args: argparse.Namespace) -> int:
                 timeout=600.0,  # thinking models can take minutes per answer
                 rate_per_sec=args.rate,
                 max_retries=8,  # free tiers shed load with 429/1305 under peak
+                temperature=args.temperature,
             )
         )
         report = run_leak_audit(tasks, llm, PitStore(con))
@@ -510,6 +511,12 @@ def main(argv: list[str] | None = None) -> int:
         help="requests per second (free tiers often cap RPM; 0.25 = 1 call / 4s)",
     )
     p.add_argument("--gated-report", default=None, help="pitfall-run report to compare against")
+    p.add_argument(
+        "--temperature",
+        type=float,
+        default=0.0,
+        help="omit with --temperature 1 for models that lock sampling (e.g. kimi-k2.6)",
+    )
     p.add_argument("--out", default=None)
     p.set_defaults(func=_cmd_pitfall_leak)
 

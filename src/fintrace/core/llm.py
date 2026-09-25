@@ -111,7 +111,7 @@ class OpenAICompatLLM:
         api_key: str | None = None,
         model: str | None = None,
         timeout: float = 180.0,
-        temperature: float = 0.0,
+        temperature: float | None = 0.0,
         max_retries: int = 3,
         rate_per_sec: float = 5.0,
     ) -> None:
@@ -123,6 +123,8 @@ class OpenAICompatLLM:
                 "LLM endpoint not configured: set FINTRACE_LLM_BASE_URL and "
                 "FINTRACE_LLM_MODEL (and FINTRACE_LLM_API_KEY if the endpoint requires auth)"
             )
+        # None -> omit from payload entirely (some models, e.g. kimi-k2.6, lock
+        # sampling params and reject temperature outright)
         self.temperature = temperature
         self._max_retries = max_retries
         self._limiter = RateLimiter(rate_per_sec, burst=2)
@@ -135,11 +137,9 @@ class OpenAICompatLLM:
     def complete(
         self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None
     ) -> LLMResponse:
-        payload: dict[str, Any] = {
-            "model": self.model,
-            "messages": messages,
-            "temperature": self.temperature,
-        }
+        payload: dict[str, Any] = {"model": self.model, "messages": messages}
+        if self.temperature is not None:
+            payload["temperature"] = self.temperature
         if tools:
             # Callers pass OpenAI-format tool dicts ({"type": "function", ...});
             # send them verbatim — wrapping again loses the inner "name" field.
