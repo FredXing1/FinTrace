@@ -49,6 +49,9 @@ files = ["src", "tests"]
 # src layout: mypy cannot reliably resolve the project package through PEP 660
 # editable installs; point it at the source tree explicitly.
 mypy_path = "src"
+# demo/app.py runs inside a Hugging Face Space runtime whose deps (streamlit)
+# are not part of this package's dev environment.
+exclude = ["^demo/"]
 
 [[tool.mypy.overrides]]
 module = "duckdb.*"

@@ -343,6 +343,42 @@ def _cmd_pitfall_leak(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_demo_export(args: argparse.Namespace) -> int:
+    """Export a small DuckDB subset (star companies only) for the hosted demo."""
+    tickers = [t.strip().upper() for t in args.tickers.split(",") if t.strip()]
+    con = connect()
+    try:
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        if out.exists():
+            out.unlink()
+        con.execute("CREATE OR REPLACE TEMP TABLE want_tickers (t VARCHAR)")
+        con.executemany("INSERT INTO want_tickers VALUES (?)", [(t,) for t in tickers])
+        con.execute(
+            "CREATE OR REPLACE TEMP TABLE want_ciks AS "
+            "SELECT DISTINCT e.cik, e.name, e.tickers FROM entities e "
+            "JOIN want_tickers w ON list_contains(e.tickers, w.t)"
+        )
+        path_sql = str(out).replace("'", "''")
+        con.execute(f"ATTACH '{path_sql}' AS demo_db")
+        con.execute("CREATE TABLE demo_db.entities AS SELECT cik, name, tickers FROM want_ciks")
+        con.execute(
+            "CREATE TABLE demo_db.facts AS SELECT f.* FROM facts f "
+            "JOIN want_ciks c ON f.cik = c.cik"
+        )
+        counts = con.execute(
+            "SELECT (SELECT COUNT(*) FROM demo_db.entities), (SELECT COUNT(*) FROM demo_db.facts)"
+        ).fetchone()
+        if counts is None:
+            raise RuntimeError("demo export: no counts returned")
+        n_cik, n_fact = int(counts[0]), int(counts[1])
+        con.execute("DETACH demo_db")
+        print(json.dumps({"companies": n_cik, "facts": n_fact, "db": str(out)}))
+        return 0
+    finally:
+        con.close()
+
+
 def _cmd_query_fact(args: argparse.Namespace) -> int:
     con = connect()
     try:
@@ -519,6 +555,18 @@ def main(argv: list[str] | None = None) -> int:
     )
     p.add_argument("--out", default=None)
     p.set_defaults(func=_cmd_pitfall_leak)
+
+    p = sub.add_parser(
+        "demo-export", help="export a small DuckDB subset (star companies) for the hosted demo"
+    )
+    p.add_argument(
+        "--tickers",
+        default="AAPL,MSFT,NVDA,JPM,V,UNH,HD,MCD,KO,DIS,CAT,CRM,IBM,GE,AMGN,BA,HON,"
+        "TXN,LOW,INTC,CVX,NKE,AXP,WMT,PG,XOM,CSCO,TRV",
+        help="comma-separated tickers to include",
+    )
+    p.add_argument("--out", default="demo/demo.duckdb")
+    p.set_defaults(func=_cmd_demo_export)
 
     p = sub.add_parser("audit", help="rebuild the auditpack from a saved trace")
     p.add_argument("trace", help="path to data/traces/<run_id>.json")

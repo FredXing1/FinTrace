@@ -25,3 +25,6 @@ build/
 AGENTS.md
 CLAUDE.md
 .zcodeignore
+
+# Demo build artifact (uploaded to the HF Space separately)
+demo/demo.duckdb
