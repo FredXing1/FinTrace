@@ -42,6 +42,10 @@ date: the gated agent answers "unknown" on 16/17 of them.
 The naive pattern "wins" T3 by 30 points purely from look-ahead access — in a
 naive backtest that is indistinguishable from forecasting alpha.
 
+Replicated on a second model family (GLM-4.7, thinking disabled): **all 17
+impossible questions answered with a specific value, 11.8% matching the true
+future value** — identical to DeepSeek. The pattern is model-independent.
+
 Full reports: `data/pitfall/report-deepseek-core200.json`,
 `data/pitfall/leak-deepseek-core200.json` (generated locally by
 `fintrace pitfall-run` / `fintrace pitfall-leak`).
