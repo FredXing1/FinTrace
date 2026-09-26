@@ -38,6 +38,7 @@ date: the gated agent answers "unknown" on 16/17 of them.
 | bare model (no tools, no as-of framing) | 2/17 (**11.8%**) | 5% | 53.3% | 25% |
 | naive agent (live-data tools, no time gate) | **14/17 (82%)** | 77% | 86.7% | **80%** |
 | gated FinTrace agent | **0/17 (says "unknown" 94%)** | **92%** | **93.3%** | 50% |
+| bare model (GLM-4.7, thinking disabled) | 2/17 (**11.8%**) | 2% | 55.0% | 12.5% |
 
 The naive pattern "wins" T3 by 30 points purely from look-ahead access — in a
 naive backtest that is indistinguishable from forecasting alpha.

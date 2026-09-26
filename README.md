@@ -25,6 +25,26 @@ pick a company, a metric, and a knowledge cutoff; watch the point-in-time answer
 
 📄 Technical report (draft): [`reports/technical-report.md`](reports/technical-report.md)
 
+## Results — same benchmark, three configurations
+
+Frozen core-200 (T1×100 incl. 17 *impossible* tasks whose answers were not
+public at the reference date / T2×60 / T3×40), deepseek-chat backbone,
+bootstrap 95% CIs in the [technical report](reports/technical-report.md).
+
+| configuration | impossible tasks answered with the TRUE future value | T1 time-gated QA | T2 claim verification | T3 forward estimation¹ |
+|---|---|---|---|---|
+| bare model (GLM-4.7, no tools) | 2/17 (11.8%) | 2% | 55.0% | 12.5% |
+| bare model (deepseek-chat, no tools) | 2/17 (11.8%) | 5% | 53.3% | 25.0% |
+| naive agent (live-data tools, no time gate) | **14/17 (82%)** | 77% | 86.7% | **80%** |
+| **gated FinTrace agent** | **0/17** (16/17 correctly "unknown") | **92%** | **93.3%** | 50% |
+
+¹ T3 pass = APE ≤ 20%. The naive agent's T3 "forecasting" jump (50% → 80%)
+and the 82% impossible-question leakage are look-ahead access, not
+intelligence: on T1-positive tasks the naive agent is flat vs gated
+(93% vs 92%). The pattern replicates across both model families.
+
+Reproduce: `fintrace pitfall-generate` → `pitfall-run` → `pitfall-leak`.
+
 ## Quick start (human developers)
 
 ```bash
