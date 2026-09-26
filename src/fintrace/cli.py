@@ -326,6 +326,9 @@ def _cmd_pitfall_leak(args: argparse.Namespace) -> int:
                 rate_per_sec=args.rate,
                 max_retries=8,  # free tiers shed load with 429/1305 under peak
                 temperature=args.temperature,
+                extra_payload=(
+                    {"thinking": {"type": "disabled"}} if args.thinking_disabled else None
+                ),
             )
         )
         report = run_leak_audit(tasks, llm, PitStore(con))
@@ -552,6 +555,11 @@ def main(argv: list[str] | None = None) -> int:
         type=float,
         default=0.0,
         help="omit with --temperature 1 for models that lock sampling (e.g. kimi-k2.6)",
+    )
+    p.add_argument(
+        "--thinking-disabled",
+        action="store_true",
+        help="disable hybrid thinking (Zhipu GLM) — audits want first-pass answers",
     )
     p.add_argument("--out", default=None)
     p.set_defaults(func=_cmd_pitfall_leak)

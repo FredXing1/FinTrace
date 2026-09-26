@@ -114,6 +114,7 @@ class OpenAICompatLLM:
         temperature: float | None = 0.0,
         max_retries: int = 3,
         rate_per_sec: float = 5.0,
+        extra_payload: dict[str, Any] | None = None,
     ) -> None:
         self.base_url = (base_url or os.environ.get("FINTRACE_LLM_BASE_URL", "")).rstrip("/")
         self.api_key = api_key or os.environ.get("FINTRACE_LLM_API_KEY", "")
@@ -127,6 +128,8 @@ class OpenAICompatLLM:
         # sampling params and reject temperature outright)
         self.temperature = temperature
         self._max_retries = max_retries
+        # vendor-specific body extensions, e.g. Zhipu {"thinking": {"type": "disabled"}}
+        self.extra_payload = extra_payload or {}
         self._limiter = RateLimiter(rate_per_sec, burst=2)
         self._client = httpx.Client(
             base_url=self.base_url,
@@ -140,6 +143,7 @@ class OpenAICompatLLM:
         payload: dict[str, Any] = {"model": self.model, "messages": messages}
         if self.temperature is not None:
             payload["temperature"] = self.temperature
+        payload.update(self.extra_payload)
         if tools:
             # Callers pass OpenAI-format tool dicts ({"type": "function", ...});
             # send them verbatim — wrapping again loses the inner "name" field.
