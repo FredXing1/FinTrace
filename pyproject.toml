@@ -18,6 +18,7 @@ fintrace = "fintrace.cli:main"
 dev = [
     "jsonschema>=4.23",
     "mypy>=1.11",
+    "pillow>=12.3.0",
     "pytest>=8.3",
     "ruff>=0.6",
     "streamlit>=1.64.0",

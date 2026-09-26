@@ -44,8 +44,23 @@ def _label(row):
     return f"{name} ({sym})"
 
 
+# Deep links: /?company=apple&tag=RevenueFromContract...&period=2022-09-24&asof=2023-01-01
+qp = st.query_params
+q_company, q_tag = qp.get("company"), qp.get("tag")
+q_period, q_asof = qp.get("period"), qp.get("asof")
+
+
+def _index_of(options: list[str], wanted: str | None) -> int:
+    if not wanted:
+        return 0
+    for i, option in enumerate(options):
+        if wanted.lower() in option.lower():
+            return i
+    return 0
+
+
 labels = [_label(r) for r in companies]
-pick = st.selectbox("Company", labels)
+pick = st.selectbox("Company", labels, index=_index_of(labels, q_company))
 cik, name, tickers = companies[labels.index(pick)]
 symbol = tickers[0] if tickers else f"CIK {cik}"
 
@@ -55,7 +70,7 @@ tags = [
         "SELECT DISTINCT tag FROM facts WHERE cik = ? ORDER BY tag", [cik]
     ).fetchall()
 ]
-tag = st.selectbox("XBRL tag", tags)
+tag = st.selectbox("XBRL tag", tags, index=_index_of(tags, q_tag))
 
 periods = [
     str(r[0])
@@ -64,7 +79,9 @@ periods = [
         [cik, tag],
     ).fetchall()
 ]
-period_end = st.selectbox("Fiscal period ending", periods)
+period_end = st.selectbox(
+    "Fiscal period ending", periods, index=_index_of(periods, q_period)
+)
 period_end_date = date.fromisoformat(period_end)
 
 fmin, fmax = con.execute(
@@ -81,11 +98,18 @@ if fmin is None or fmax is None:
 # unknown zone is the point, so the user must be able to slide into it.
 slider_min = period_end_date
 slider_max = max(fmax, period_end_date) + timedelta(days=1)
+as_of_default = slider_max
+if q_asof:
+    try:
+        parsed = date.fromisoformat(q_asof)
+        as_of_default = min(max(parsed, slider_min), slider_max)
+    except ValueError:
+        pass
 as_of = st.slider(
     "Knowledge cutoff (as_of)",
     min_value=slider_min,
     max_value=slider_max,
-    value=slider_max,
+    value=as_of_default,
     format="YYYY-MM-DD",
     key=f"asof-{cik}-{tag}-{period_end}",
     help="Slide left to travel back in time: the answer must only use filings public at this date.",
@@ -104,6 +128,14 @@ leak = con.execute(
 ).fetchone()
 
 left, right = st.columns(2, gap="large")
+first_public = min(
+    (date.fromisoformat(str(d)) for (d,) in con.execute(
+        "SELECT DISTINCT CAST(filed AS DATE) FROM facts "
+        "WHERE cik = ? AND tag = ? AND period_end = ? AND filed IS NOT NULL",
+        [cik, tag, period_end],
+    ).fetchall()),
+    default=None,
+)
 with left:
     st.subheader("✅ Point-in-time answer (public at as_of)")
     if gated:
@@ -111,9 +143,9 @@ with left:
         st.write(f"evidence: accn `{gated[1]}` · filed `{gated[2]}`")
     else:
         st.error("unknown — this fact was not public at the as_of date.")
-        if leak:
-            days = (leak[2] - as_of).days
-            st.write(f"(first filed `{leak[2]}`, {days} days after your cutoff)")
+        if first_public:
+            days = (first_public - as_of).days
+            st.write(f"(first became public on {first_public}, {days} days after your cutoff)")
 
 with right:
     st.subheader("🔓 What a naive live-data API returns today")
