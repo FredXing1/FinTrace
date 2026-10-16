@@ -23,6 +23,8 @@ CORE="${CORE:-data/pitfall/core.jsonl}"
 OUT="${OUT:-data/pitfall/ablation}"
 ARMS="${ARMS:-full gate-off prompt-off neither no-tools single-shot}"
 TIMEOUT="${TIMEOUT:-600}"
+FINTRACE="${FINTRACE_BIN:-$(dirname "$0")/../.venv/bin/fintrace}"
+[ -x "$FINTRACE" ] || FINTRACE=fintrace
 
 mkdir -p "$OUT"
 tag=$(echo "$FINTRACE_LLM_MODEL" | tr ':' '-')
@@ -34,7 +36,7 @@ for arm in $ARMS; do
     continue
   fi
   echo "=== arm: $arm -> $report"
-  fintrace pitfall-run \
+  "$FINTRACE" pitfall-run \
     --tasks "$CORE" \
     --arm "$arm" \
     --model "$FINTRACE_LLM_MODEL" \
