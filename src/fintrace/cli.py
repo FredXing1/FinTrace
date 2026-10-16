@@ -267,7 +267,7 @@ def _cmd_pitfall_run(args: argparse.Namespace) -> int:
             llm = MockLLM([])
             model = "mock"
         else:
-            llm = OpenAICompatLLM(model=args.model)
+            llm = OpenAICompatLLM(model=args.model, timeout=args.timeout)
             model = llm.model
         governor = BudgetGovernor(session="pitfall-run")
         store = PitStore(con)
@@ -542,6 +542,12 @@ def main(argv: list[str] | None = None) -> int:
         help="ablation arm: " + "; ".join(f"{a.name}={a.description}" for a in _ARMS.values()),
     )
     p.add_argument("--model", default=None)
+    p.add_argument(
+        "--timeout",
+        type=float,
+        default=180.0,
+        help="per-call seconds; raise for slow local backends doing long prefills",
+    )
     p.add_argument("--max-steps", type=int, default=6)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--out", default=None, help="write full report JSON here")

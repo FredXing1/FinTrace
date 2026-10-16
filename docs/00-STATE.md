@@ -1,6 +1,6 @@
 # Status
 
-Last updated: 2026-09-26 | Phase: benchmark + leakage audit complete; technical report drafted | Next: public launch
+Last updated: 2026-10-01 | Phase: launched (repo public, hosted demo live) | Next: zero-API-cost local ablation matrix, report finalization
 
 > Working notes for internal strategy/budget/session history are kept outside
 > the public repository; this file tracks public-facing status only.
@@ -55,11 +55,17 @@ Total LLM cost of both baseline runs: ≈ ¥4.4 (~$0.6).
 
 ## Roadmap
 
-- [x] technical report draft (`reports/technical-report.md`) — ablation and
-      second/third-model sections pending runs
-- [ ] expand task pool; audit third-party agent frameworks
+- [x] technical report draft (`reports/technical-report.md`) — ablation section
+      pending local runs
+- [x] task pool expanded to 579 tasks; ungated naive-agent audit done
 - [x] hosted demo live: https://fintrace-demo.streamlit.app (zero-LLM time-travel
       playground over a 28-company subset; AppTest regression suite in CI)
+- [ ] ablation matrix (`fintrace pitfall-run --arm`, `scripts/ablation-local.sh`):
+      six arms decomposing structural tool gating vs prompt discipline vs the
+      agent loop, each with an in-run T1-null leakage audit — every remaining
+      self-run experiment stays on frozen core-200 and local open-weights
+      models (zero API cost by policy)
+- [ ] third-party agent framework audit (code-level, no LLM runs)
 - [ ] public dataset release (Hugging Face)
 - [ ] technical report finalization
 
