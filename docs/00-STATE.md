@@ -60,11 +60,11 @@ Total LLM cost of both baseline runs: ≈ ¥4.4 (~$0.6).
 - [x] task pool expanded to 579 tasks; ungated naive-agent audit done
 - [x] hosted demo live: https://fintrace-demo.streamlit.app (zero-LLM time-travel
       playground over a 28-company subset; AppTest regression suite in CI)
-- [ ] ablation matrix (`fintrace pitfall-run --arm`, `scripts/ablation-local.sh`):
-      six arms decomposing structural tool gating vs prompt discipline vs the
-      agent loop, each with an in-run T1-null leakage audit — every remaining
-      self-run experiment stays on frozen core-200 and local open-weights
-      models (zero API cost by policy)
+- [x] ablation matrix (`fintrace pitfall-run --arm`, `scripts/ablation-local.sh`)
+      on local open-weights qwen2.5-7b, all six arms over frozen core-200 at
+      zero API cost: T1-null leakage 0% (full gate) vs 35% (prompt discipline
+      only) vs 6% (gate only) — structural tool gating is the load-bearing
+      layer; report analysis next
 - [ ] third-party agent framework audit (code-level, no LLM runs)
 - [ ] public dataset release (Hugging Face)
 - [ ] technical report finalization
