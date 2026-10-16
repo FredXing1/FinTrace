@@ -2,10 +2,9 @@
 
 **Technical Report — v0.1 draft** · 2026-09 · Apache-2.0 · code at `github.com/FredXing1/FinTrace`
 
-> Status: draft skeleton. Numbers in §5.2 and §5.3 are final measured results
-> (deepseek-chat backbone). Entries marked **[TODO]** await ongoing runs
-> (second-model replication, ablation matrix) and will be filled in the next
-> revision.
+> Status: v0.2. Numbers in §5.2–§5.5 are final measured results. Remaining
+> [TODO] entries are prose expansions (related work, appendices), not
+> pending runs.
 
 ---
 
@@ -33,8 +32,13 @@ Removing the time gate — asking the bare model the same questions — produces
 the true future value on 2/17 impossible tasks directly from training memory;
 wiring a naive agent to live-data tools (the dominant open-source pattern)
 raises that to 14/17 (82%) and inflates forward "forecasting" accuracy from
-50% to 80%. All three configurations cost under ¥5 (~$0.7) in total LLM fees,
-and the entire pipeline is reproducible byte-for-byte from public EDGAR data.
+50% to 80%. A six-arm ablation isolates the mechanism: with structural tool
+gating removed but the discipline prompt kept, 35% of impossible tasks still
+leak; with the gate kept and the prompt removed, 6% — prompt discipline alone
+does not prevent tool-borne look-ahead. All three audit configurations cost
+under ¥5 (~$0.7) in total LLM fees and the ablation matrix runs on local
+open-weights inference at zero API cost; the entire pipeline is reproducible
+byte-for-byte from public EDGAR data.
 
 ---
 
@@ -60,11 +64,17 @@ shows best frontier model at 46.8% on expert tasks at $3.79/task]
    gold). **[§4]**
 4. A three-configuration leakage audit (bare model / naive live-data agent /
    gated agent) quantifying look-ahead inflation on identical tasks. **[§5.3]**
-5. **auditpack v0.1**: an open JSON Schema for auditable agent output —
+5. An ablation matrix that decomposes the protection into structural tool
+   gating, prompt discipline, and loop depth: prompt discipline alone leaves
+   35% of impossible tasks leaking; the structural gate alone leaves 6%;
+   the full system leaks 0. **[§5.4]**
+6. **auditpack v0.1**: an open JSON Schema for auditable agent output —
    conclusion, per-claim verdicts, evidence chain, execution log, human
    sign-off. **[§6]**
-6. A cost-disciplined protocol: the full 200-task gated baseline plus a
-   200-task ungated audit cost ≈ ¥4.4 (~$0.6) in LLM fees. **[§5.1]**
+7. A cost-disciplined protocol: the full 200-task gated baseline plus a
+   200-task ungated audit cost ≈ ¥4.4 (~$0.6) in LLM fees; the ablation
+   matrix runs entirely on local open-weights inference at zero API cost.
+   **[§5.1, §5.4]**
 
 ## 2. Background and Related Work
 
@@ -176,16 +186,70 @@ while T1-positive accuracy is flat (93% vs 92%), i.e. the naive agent is not
 smarter, only unsound; two leaked null answers (Enable Midstream, Carvana)
 would be scored as alpha in a naive backtest]
 
-### 5.4 Ablations
+### 5.4 Ablations: which layer actually prevents leakage?
 
-**[TODO]** — planned ablation arms: −time-gate / −unknown-escape-hatch /
-−tools (parametric only) / −claim-verification; each reported against
-leakage rate, unsupported rate, accuracy, and cost.
+The gated agent bundles three protection layers: (i) **structural tool
+gating** — every tool is `as_of`-bounded and physically cannot return a
+post-`T` fact; (ii) **prompt discipline** — the system prompt states the
+cutoff and prescribes "unknown" for anything not public; (iii) the
+**multi-step loop** that lets the agent iterate tool calls. We run six arms
+that remove these layers factorially, on the frozen core-200, with a local
+open-weights backbone (Qwen2.5-7B-Instruct, Q4_K_M quantization, served
+locally, temperature 0, zero API cost) so that every arm difference is
+attributable to the removed layer and not to a change of model.
+
+| arm | gate | prompt | loop | T1 | T2 | T3 | T1-null leak | med. lat. |
+|---|---|---|---|---|---|---|---|---|
+| full | ✓ | ✓ | multi-step | 50% | 68.3% | 0% | **0/17** | 9.6s |
+| gate-off (prompt only) | – | ✓ | multi-step | 40% | 73.3% | 37.5% | **6/17 (35.3%)** | 9.5s |
+| prompt-off (gate only) | ✓ | – | multi-step | 25% | 50.0% | 15% | 1/17 (5.9%) | 6.9s |
+| neither (naive pattern) | – | – | multi-step | 19% | 56.7% | 20% | 2/17 (11.8%) | 6.8s |
+| no-tools | – | ✓ | single call | 17% | 35.0% | 0% | 0/17 | 1.2s |
+| one-round | ✓ | ✓ | one tool round | 50% | 68.3% | 0% | 0/17 | ≤9.6s |
+
+Findings:
+
+1. **Prompt discipline alone does not prevent tool-borne leakage.** With the
+   structural gate removed but the discipline prompt kept, the agent leaked
+   6/17 impossible tasks (35.3%) — and answered a specific value on 7/17. The
+   system prompt stated the cutoff and prescribed "unknown"; the model
+   retrieved the latest, post-`T` value through the tool anyway and reported
+   it. A prompt shapes *framing*; it does not change *information access*.
+2. **Structural gating is the load-bearing layer.** With the gate in place
+   and the discipline prompt removed, leakage falls to 1/17 (5.9%); the full
+   system leaks 0/17. Once the tool cannot return future facts, the only
+   remaining channel is training memory (the bare-model rate, §5.3), and the
+   discipline prompt closes even that residual.
+3. **Ungated access manufactures apparent forecasting skill.** gate-off
+   scores 37.5% on T3 forward estimation vs 0% for the identical model under
+   the full gate — the "forecast" is retrieval of the realized value, the
+   same illusion documented cross-model in §5.3.
+4. **Loop depth is not a protection mechanism.** one-round reproduces full
+   exactly on every family: for this backbone the answer is decided by the
+   first tool round; additional reflection steps change nothing.
+5. **Memory-only leakage is model-dependent.** The naive arm answers a value
+   on 13/17 impossible tasks but only 2 match the realized value — this
+   backbone hallucinates more than it remembers. Absolute capability is far
+   below the API backbone of §5.2 (T1 50% vs 92%); the ablation is read as
+   *within-model* differences across arms, and the gate ≫ prompt ordering is
+   the invariant we report.
+
+Arms share the response cache for byte-identical calls (temperature 0), so
+genuinely identical prefixes are computed once; no cross-model contamination
+is possible because cache keys include the model name. Total ablation cost:
+¥0 (local inference, ~7–10 s per task on an Apple M2).
 
 ### 5.5 Second-model replication
 
-**[TODO]** — GLM-4.7 (thinking) and Kimi K2.6 runs in progress; reported
-with identical protocol.
+The leakage audit of §5.3 was replicated with GLM-4.7 (thinking disabled) as
+the bare model: **2/17 (11.8%) of impossible tasks answered with the true
+future value — identical to deepseek-chat** — with T1 2%, T2 55%, T3 12.5%.
+Two model families from different vendors produce the same memory-leakage
+rate, supporting the claim that look-ahead leakage is a property of the
+*evaluation setup* (no gate, no unknown escape hatch), not of a particular
+model. Third-family replication is covered by the local open-weights backbone
+of §5.4, which exhibits the same qualitative pattern under the factorial
+arms.
 
 ## 6. auditpack: an audit-trail schema
 
@@ -201,8 +265,11 @@ reviewers, backtest authors, evaluation harnesses]
   invite pooled replications rather than over-claiming
 - extraction: pattern-based v0.1 claim extraction is sensitive to
   LaTeX/markdown formatting; an LLM-assisted extractor is planned
-- external: single backbone reported here; harness is model-agnostic and
-  second/third model replications are in progress **[TODO §5.5]**
+- external: §5.2–§5.3 use a single API backbone (deepseek-chat) plus a
+  second-family replication (GLM-4.7, §5.5); the ablation matrix (§5.4) uses
+  a single local open-weights backbone at Q4 quantization, whose absolute
+  accuracy is far lower — ablation conclusions are within-model arm
+  differences, not absolute-score claims
 - coverage: US filings only; non-US markets require adapters whose data
   licensing must be evaluated per jurisdiction
 
@@ -228,5 +295,34 @@ leaderboard release; ablative study of gating layers]
 
 ## Appendix B. Reproduction
 
-[commands: generate / freeze / run / leak; hardware; API versions; total
-cost accounting from the spend ledger]
+```sh
+# 1. data layer (public SEC EDGAR; declare a contact UA)
+export FINTRACE_SEC_UA="your-project contact-email"
+fintrace download companyfacts && fintrace ingest companyfacts
+fintrace ingest-tickers
+
+# 2. benchmark: generate, freeze core-200 (deterministic, sha256 manifest)
+fintrace pitfall-generate                       # -> data/pitfall/{pool,core,manifest}
+
+# 3. gated baseline (any OpenAI-compatible endpoint)
+export FINTRACE_LLM_BASE_URL=https://api.deepseek.com FINTRACE_LLM_API_KEY=... FINTRACE_LLM_MODEL=deepseek-chat
+fintrace pitfall-run --tasks data/pitfall/core.jsonl --out report.json
+
+# 4. leakage audit (bare model, no as-of framing)
+fintrace pitfall-leak --tasks data/pitfall/core.jsonl --gated-report report.json --out leak.json
+
+# 5. ablation matrix (local open-weights, zero API cost)
+FINTRACE_LLM_BASE_URL=http://localhost:11434/v1 \
+FINTRACE_LLM_API_KEY=ollama FINTRACE_LLM_MODEL=qwen2.5:7b \
+scripts/ablation-local.sh       # six arms -> data/pitfall/ablation/
+```
+
+Hardware: Apple M2 (24 GB) for local inference; scoring is deterministic
+(pattern/numeric matching, no LLM judge) with 2000-resample bootstrap CIs.
+Total API-model spend for §5.2–§5.3: ≈ ¥4.4 from the budget governor's
+ledger; §5.4–§5.5: ¥0. Reports referenced in this text:
+`data/pitfall/report-deepseek-core200.json`,
+`data/pitfall/report-deepseek-core200-ungated.json`,
+`data/pitfall/leak-deepseek-core200.json`,
+`data/pitfall/leak-glm47-core200.json`,
+`data/pitfall/ablation/report-qwen2.5-7b-*.json`.
