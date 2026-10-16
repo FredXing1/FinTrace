@@ -8,7 +8,7 @@ their marginal contributions can be measured on the same frozen core-200:
 - ``gate-off``    ungated tools, PIT prompt     -> what prompt discipline alone catches
 - ``neither``     ungated tools, neutral prompt -> the naive open-source pattern
 - ``no-tools``    no tools at all, PIT prompt   -> framing/discipline without data access
-- ``single-shot`` gated tools, one LLM call      -> removes the multi-step ReAct loop
+- ``one-round``   gated tools, one tool round   -> removes multi-step reflection
 
 Every arm is scored with the T1-null leakage audit (answers matching the
 realized future value on tasks whose gold was not public at as_of), so arms
@@ -61,11 +61,11 @@ ARMS: dict[str, ArmConfig] = {
     "no-tools": ArmConfig(
         "no-tools", "none", "pit", 1, "PIT framing and discipline, no data access"
     ),
-    "single-shot": ArmConfig(
-        "single-shot",
+    "one-round": ArmConfig(
+        "one-round",
         "gated",
         "pit",
-        1,
-        "gated tools, one LLM call: no multi-step loop",
+        2,
+        "gated tools, exactly one tool round: no multi-step reflection",
     ),
 }

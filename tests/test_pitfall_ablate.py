@@ -19,14 +19,14 @@ def test_arms_cover_the_factorial() -> None:
         "gate-off",
         "neither",
         "no-tools",
-        "single-shot",
+        "one-round",
     }
     assert ARMS["full"].tools == "gated" and ARMS["full"].prompt == "pit"
     assert ARMS["prompt-off"].tools == "gated" and ARMS["prompt-off"].prompt == "neutral"
     assert ARMS["gate-off"].tools == "ungated" and ARMS["gate-off"].prompt == "pit"
     assert ARMS["neither"].tools == "ungated" and ARMS["neither"].prompt == "neutral"
     assert ARMS["no-tools"].tools == "none" and ARMS["no-tools"].max_steps == 1
-    assert ARMS["single-shot"].max_steps == 1
+    assert ARMS["one-round"].max_steps == 2
     # the neutral prompt must not carry any point-in-time discipline
     for banned in ("as_of", "point-in-time", "unknown"):
         assert banned not in NEUTRAL_PROMPT.lower()

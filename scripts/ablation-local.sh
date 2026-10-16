@@ -21,7 +21,7 @@ set -eu
 : "${FINTRACE_LLM_MODEL:?set FINTRACE_LLM_MODEL, e.g. qwen2.5-7b-instruct-q4_k_m}"
 CORE="${CORE:-data/pitfall/core.jsonl}"
 OUT="${OUT:-data/pitfall/ablation}"
-ARMS="${ARMS:-full gate-off prompt-off neither no-tools single-shot}"
+ARMS="${ARMS:-full gate-off prompt-off neither no-tools one-round}"
 TIMEOUT="${TIMEOUT:-600}"
 FINTRACE="${FINTRACE_BIN:-$(dirname "$0")/../.venv/bin/fintrace}"
 [ -x "$FINTRACE" ] || FINTRACE=fintrace
