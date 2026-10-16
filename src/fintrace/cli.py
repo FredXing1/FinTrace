@@ -24,7 +24,7 @@ from fintrace.core.budget import BudgetGovernor
 from fintrace.core.cache import ResponseCache
 from fintrace.core.llm import LLMResponse, MockLLM, OpenAICompatLLM, ToolCall
 from fintrace.core.runtime import Agent
-from fintrace.core.tools import ToolBox, pit_tools, pit_tools_ungated
+from fintrace.core.tools import Tool, ToolBox, pit_tools, pit_tools_ungated
 from fintrace.data.edgar import companyfacts, fts, submissions, tickers
 from fintrace.data.http import SecHttpClient
 from fintrace.data.pit import PitStore
@@ -246,17 +246,19 @@ def _cmd_pitfall_generate(args: argparse.Namespace) -> int:
 
 def _cmd_pitfall_run(args: argparse.Namespace) -> int:
     from fintrace.core.llm import MockLLM, OpenAICompatLLM
+    from fintrace.pitfall.ablate import ARMS, NEUTRAL_PROMPT
     from fintrace.pitfall.harness import run_tasks
+    from fintrace.pitfall.leak import ungated_question
     from fintrace.pitfall.model import read_jsonl
 
     tasks = read_jsonl(Path(args.tasks))
     if args.limit:
         tasks = tasks[: args.limit]
-    if args.ungated:
-        # leak audit mode: strip as-of framing from questions (tools/prompts
-        # are swapped below) so the naive agent never sees the cutoff.
-        from fintrace.pitfall.leak import ungated_question
-
+    # --ungated survives as the backwards-compatible alias for the naive arm.
+    arm = ARMS["neither" if args.ungated else args.arm]
+    if arm.prompt == "neutral":
+        # strip as-of framing from questions so the arm never sees the cutoff
+        # (framing + system prompt are one protection layer, toggled together).
         tasks = [{**t, "question": ungated_question(t)} for t in tasks]
     con = connect()
     try:
@@ -268,13 +270,13 @@ def _cmd_pitfall_run(args: argparse.Namespace) -> int:
             llm = OpenAICompatLLM(model=args.model)
             model = llm.model
         governor = BudgetGovernor(session="pitfall-run")
-        tools = (
-            pit_tools_ungated(PitStore(con)) if args.ungated else pit_tools(PitStore(con))
-        )
-        naive_prompt = (
-            "You are a financial research assistant. Use the provided tools to "
-            "answer. Cite accession numbers when you have them. Respond in the "
-            "language of the question."
+        store = PitStore(con)
+        tools: list[Tool] = (
+            pit_tools_ungated(store)
+            if arm.tools == "ungated"
+            else pit_tools(store)
+            if arm.tools == "gated"
+            else []
         )
 
         def run_fn(task: dict[str, Any]) -> str | None:
@@ -284,8 +286,8 @@ def _cmd_pitfall_run(args: argparse.Namespace) -> int:
                 model=model,
                 governor=governor,
                 cache=ResponseCache(),
-                max_steps=args.max_steps,
-                system_prompt=naive_prompt if args.ungated else None,
+                max_steps=arm.max_steps or args.max_steps,
+                system_prompt=NEUTRAL_PROMPT if arm.prompt == "neutral" else None,
             )
             try:
                 return agent.run(task["question"], as_of=task["as_of"], save_trace=False).answer
@@ -296,9 +298,10 @@ def _cmd_pitfall_run(args: argparse.Namespace) -> int:
                     return None
                 raise
 
-        report = run_tasks(tasks, run_fn, ci_seed=args.seed)
+        report = run_tasks(tasks, run_fn, ci_seed=args.seed, store=store)
     finally:
         con.close()
+    report["arm"] = arm.name
     summary = {k: v for k, v in report.items() if k != "results"}
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     if args.out:
@@ -453,6 +456,8 @@ def _cmd_fts_fetch(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    from fintrace.pitfall.ablate import ARMS as _ARMS
+
     parser = argparse.ArgumentParser(
         prog="fintrace",
         description="FinTrace: auditable point-in-time financial data primitives",
@@ -528,7 +533,13 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument(
         "--ungated",
         action="store_true",
-        help="leak-audit mode: naive tools (latest values, no time gate) + no PIT prompt",
+        help="backwards-compatible alias for --arm neither",
+    )
+    p.add_argument(
+        "--arm",
+        default="full",
+        choices=sorted(_ARMS),
+        help="ablation arm: " + "; ".join(f"{a.name}={a.description}" for a in _ARMS.values()),
     )
     p.add_argument("--model", default=None)
     p.add_argument("--max-steps", type=int, default=6)

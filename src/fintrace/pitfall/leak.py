@@ -54,9 +54,10 @@ def ungated_question(task: dict[str, Any]) -> str:
     return q
 
 
-def _leak_check(task: dict[str, Any], answer: str, store: PitStore) -> dict[str, Any] | None:
-    """For T1-null tasks only: did the ungated model produce the realized
-    (future) value? Returns None for other families."""
+def leak_check(task: dict[str, Any], answer: str, store: PitStore) -> dict[str, Any] | None:
+    """For T1-null tasks only: did the model produce the realized (future)
+    value? Returns None for other families. Shared with the ablation harness so
+    every arm reports the RQ1 leakage metric on identical terms."""
     if task["family"] != "T1" or task["gold"].get("kind") != "unknown":
         return None
     realized = store.fact(
@@ -104,7 +105,7 @@ def _run_one(
         "answer": answer,
         **outcome,
     }
-    leak_info = _leak_check(task, answer, store)
+    leak_info = leak_check(task, answer, store)
     if leak_info is not None:
         entry.update(leak_info)
     return entry

@@ -28,6 +28,9 @@ DEFAULT_PRICES: dict[str, tuple[float, float]] = {
     "glm": (2.00, 8.00),
     "doubao": (0.80, 2.00),
     "kimi": (4.00, 12.00),
+    # local ollama models (ablation module C): inference on this machine, ¥0
+    "qwen2.5:7b": (0.00, 0.00),
+    "qwen2.5:14b": (0.00, 0.00),
     "mock": (0.00, 0.00),
 }
 
