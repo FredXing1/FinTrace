@@ -1,6 +1,6 @@
 [project]
 name = "fintrace"
-version = "0.0.1"
+version = "1.0.0"
 description = "Auditable, point-in-time financial research data layer (FinTrace) — core of the PITfall leakage-controlled benchmark."
 readme = "README.md"
 requires-python = ">=3.12"

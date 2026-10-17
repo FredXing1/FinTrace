@@ -34,7 +34,11 @@ _SQL_TOTAL = "SELECT COALESCE(SUM(cost_rmb), 0), COUNT(*) FROM spend"
 def render_metrics(ledger: Path, cap_rmb: float) -> str:
     lines: list[str] = []
     if not ledger.exists():
-        return "# HELP fintrace_spend_rmb_total LLM spend (RMB) from the budget ledger.\n# TYPE fintrace_spend_rmb_total gauge\nfintrace_spend_rmb_total 0\n"
+        return (
+            "# HELP fintrace_spend_rmb_total LLM spend (RMB) from the budget ledger.\n"
+            "# TYPE fintrace_spend_rmb_total gauge\n"
+            "fintrace_spend_rmb_total 0\n"
+        )
 
     con = sqlite3.connect(str(ledger))
     try:

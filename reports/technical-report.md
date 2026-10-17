@@ -2,9 +2,8 @@
 
 **Technical Report — v0.1 draft** · 2026-09 · Apache-2.0 · code at `github.com/FredXing1/FinTrace`
 
-> Status: v0.2. Numbers in §5.2–§5.5 are final measured results. Remaining
-> [TODO] entries are prose expansions (related work, appendices), not
-> pending runs.
+> Status: **v1.0**. All measured results (§5.2–§5.6) are final; the report is
+> complete. Reproduction commands in Appendix B.
 
 ---
 
@@ -46,11 +45,30 @@ byte-for-byte from public EDGAR data.
 
 ### 1.1 The evaluation crisis in financial LLM agents
 
-[todo: expand — LLM trading agents report Sharpe ratios from backtests whose
-information sets include the future; PAKDD'26 survey catalogues five
-evaluation failures (look-ahead, survivorship, backtest overfitting, ignored
-costs, regime blindness) that can flip return signs; Stanford/Vals FinanceAgent
-shows best frontier model at 46.8% on expert tasks at $3.79/task]
+Three developments collide. First, the demo ecosystem is enormous and
+evaluation-poor: multi-agent trading frameworks count stars in the six
+figures (TradingAgents ~108k, with 600+ direct imitators), while the most-
+starred financial *evaluation* project — FinanceBench — sits under 1k and
+stopped updating; community effort has voted for conclusion generation over
+conclusion auditing. Second, the 2025–26 measurement literature converged on
+the same verdict from different angles: backtested returns of LLM trading
+agents are dominated by market and style exposure rather than selection
+skill (KTD-Fin), in-sample gains from contaminated signals invert
+out-of-sample (MemGuard-Alpha), in-sample correction removes most reported
+returns (FinCAD), and the Sharpe ratios of the flagship frameworks are
+"not deployable evidence" (The Alpha Illusion, which proposes the P1–P6
+minimum reporting protocol this report follows). A PAKDD'26 survey catalogues
+five evaluation failures — look-ahead, survivorship, backtest overfitting,
+ignored costs, regime blindness — any of which can flip a return's sign, and
+states plainly that the infrastructure needed to audit for them "does not
+yet exist". Third, regulators arrived: the SEC brought its first AI-washing
+enforcement actions and stood up an AI task force, the EU AI Act's high-risk
+obligations (risk management, data governance, logging, human oversight)
+became fully applicable in 2026, and China's AMAC issued model-governance
+norms for fund institutions — all three converging on the same output
+requirement: every machine-generated conclusion must carry its sources, its
+data snapshot, and an execution log a human can review. That requirement,
+not a new strategy, is what this project builds.
 
 ### 1.2 Contributions
 
@@ -80,17 +98,45 @@ shows best frontier model at 46.8% on expert tasks at $3.79/task]
 
 ### 2.1 Look-ahead leakage and the Alpha Illusion
 
-[todo: expand — Glasserman & Lin on ChatGPT sentiment backtests; Look-Ahead
-Bench; KTD-Fin (returns explained by style exposure); "The Alpha Illusion"
-P1–P6 reporting protocol; FinCAD in-context decoding correction]
+Look-ahead leakage in LLM financial evaluation was first quantified for
+sentiment backtests: Glasserman & Lin (2023) showed ChatGPT-scored news
+series carry look-ahead bias in backtested portfolios, and Lopez-Lira & Tang
+established the post-cutoff out-of-sample protocol that PITfall's T3 family
+operationalizes for *agentic* evaluation. The 2025–26 wave made the
+mechanism concrete: Look-Ahead-Bench detects memory-vs-forecast alpha decay
+across markets; KTD-Fin attributes CSI300 agent returns chiefly to market and
+style exposure; FinCAD measures a −67.1% in-sample return correction;
+MemGuard-Alpha shows contaminated signals inflate in-sample accuracy by
+~11.7 points while degrading out-of-sample; The Alpha Illusion distills the
+reporting failure into the P1–P6 protocol; and the PAKDD'26 survey names
+agent-level (tool-call) look-ahead as the open case — existing controls act
+on the data side, and no open infrastructure audits whether the *agent*
+actively retrieves the future. PITfall's unknown-gold probes are exactly
+such an audit: retrieval or memory of the future is detectable per task.
 
 ### 2.2 Benchmarks and their gaps
 
-[todo: expand — FinanceBench (static, small, no time dimension); FinBen /
-PIXIU / FinEval (pre-agent NLP); InvestorBench; FinanceAgent (expert tasks,
-no provenance axis); the 2025–26 wave of time-aware benchmarks and how
-PITfall differs: unknown-gold probes verified against all filing forms +
-structural gating shared with a deployable runtime]
+Static financial QA benchmarks (FinanceBench; the FinBen/PIXIU/FinEval
+family) have no time axis: a question has one correct answer regardless of
+when it is asked, so a model that memorized the corpus scores the same as
+one that reasons from the period's evidence — FinanceBench's own finding
+(19% for GPT-4-Turbo under realistic retrieval vs 85% with oracle evidence)
+measures retrieval difficulty, not temporal soundness. Agentic benchmarks
+add tools but mostly keep the time axis missing: InvestorBench scores
+decisions without provenance; FinanceAgent (Stanford×Vals) reports 46.8% at
+$3.79/task on expert tasks and mitigates leakage only partially by
+restricting to recent documents; StockBench and Alpha Arena evaluate live or
+no-contamination trading but are single-shot experiments, not reproducible
+benchmarks. Claim-level attribution work (FAITH for tables, FinGround for
+atomic-claim verification) improved hallucination rates substantially but
+never binds the citation to *was this evidence public at the decision
+date*. The gap PITfall occupies is the conjunction: claim-level provenance ×
+point-in-time availability, over a benchmark whose tasks are regenerable
+from public data, with the gating primitive shared by a deployable runtime
+so evaluation and deployment cannot drift apart. Framework positioning
+(FinGPT, FinRL, Qlib, RD-Agent, FinRobot, OpenBB) is orthogonal: they are
+model, RL, factor-research, platform, and data layers respectively — none
+ships a leakage-controlled evaluation or an audit-trail format.
 
 ## 3. The FinTrace Framework
 
@@ -180,11 +226,15 @@ small-cap long tail]
 | naive agent (live-data tools, no gate) | **14/17 (82%)** | 77% | 86.7% | **80%** |
 | gated FinTrace agent | **0/17** (94% say "unknown") | **92%** | **93.3%** | 50% |
 
-[todo: per-task table for the 17 null probes, including the CNX Resources
-hallucination case; discussion — the 30-point T3 swing is look-ahead access,
-while T1-positive accuracy is flat (93% vs 92%), i.e. the naive agent is not
-smarter, only unsound; two leaked null answers (Enable Midstream, Carvana)
-would be scored as alpha in a naive backtest]
+The 30-point T3 swing (80% vs 50%) is look-ahead access, not intelligence:
+on T1-positive tasks — where the answer was knowable — the naive agent is
+flat against the gated agent (93% vs 92%). It is not smarter, only unsound.
+Two of the naive agent's leaked null answers (Enable Midstream, Carvana)
+would be scored as prescient calls in a naive backtest; the gated agent
+answers "unknown" on 16/17 probes, and its single confident miss — a
+hallucinated specific value for CNX Resources — is archived in the run
+report as a specimen of training-memory fabrication under a correct
+protocol.
 
 ### 5.4 Ablations: which layer actually prevents leakage?
 
@@ -291,10 +341,10 @@ reviewers, backtest authors, evaluation harnesses]
 
 ## 8. Related Work
 
-[expand from research doc: FinGPT / FinRobot / FinRL / TradingAgents;
-FinanceBench / FinBen / InvestorBench / FinanceAgent; leakage literature:
-Glasserman & Lin, Look-Ahead-Bench, KTD-Fin, FinCAD, Alpha Illusion; open
-questions they leave open]
+Covered in §2.1 (leakage literature) and §2.2 (benchmarks); framework
+positioning (FinGPT / FinRL / Qlib / RD-Agent / FinRobot / OpenBB) closes
+§2.2. A code-level point-in-time audit of the dominant open-source agent
+framework is in §5.6.
 
 ## 9. Conclusion and Roadmap
 
@@ -304,11 +354,64 @@ layers done (§5.4)]
 
 ## References
 
-[todo — full citation list]
+- Glasserman, P. & Lin, C. (2023). *Assessing Look-Ahead Bias in Sentiment
+  Return Predictions Generated by Large Language Models*. arXiv:2309.17322
+- Lopez-Lira, A. & Tang, Y. (2023). *Can ChatGPT Forecast Stock Price
+  Movements? Return Predictability and Large Language Models*. arXiv:2304.07619
+- *Look-Ahead-Bench* (2026). arXiv:2601.13770
+- *KTD-Fin* (2026). arXiv:2605.28359
+- *FinCAD* (2026, EMNLP main). arXiv:2605.24564
+- *MemGuard-Alpha* (2026). arXiv:2603.26797
+- *The Alpha Illusion* (2026, position paper). arXiv:2605.16895
+- *Look-Ahead Leakage in LLM Financial Evaluation: A Survey* (PAKDD 2026).
+  arXiv:2603.27539
+- Islam, T. et al. (2023). *FinanceBench: A New Benchmark for Financial
+  Question Answering*. arXiv:2311.11944
+- *FinanceAgent* (Stanford × Vals AI, 2025). arXiv:2508.00828
+- *StockBench* (2025). arXiv:2510.02209
+- *InvestorBench* (2024). arXiv:2412.18174
+- *DocFinQA* (2024). arXiv:2401.06915
+- *FinBen* (2024). arXiv:2402.12659
+- *FAITH: Table QA hallucination* (2025). arXiv:2508.05201
+- *FinGround: atomic claim verification* (2026). arXiv:2604.23588
 
 ## Appendix A. Task generation templates
 
-[the exact question templates and perturbation factors]
+Tasks are template-generated with a fixed seed; identifiers, metrics, and
+dates are drawn from the as-filed store, so every instance is verifiable.
+
+**T1 time-gated QA** — one metric, one period, one cutoff:
+
+> "According to public SEC filings available as of {as_of}, what was the
+> {metric} of {entity} (ticker: {ticker}) for the fiscal period ending
+> {period_end}? If this was not public at that date, answer exactly:
+> unknown."
+
+- *positive*: gold = latest `filed ≤ as_of` value with its accession;
+- *null-gold probe*: `as_of` is set one day before first disclosure of the
+  period, and the candidate is dropped unless a set-based join across **all**
+  filing forms confirms zero prior facts (filters out 8-K pre-announcements).
+
+**T2 claim verification** — a statement about a period's value:
+
+> "As of {as_of}, is this statement correct according to public SEC filings?
+> Answer with exactly 'true' or 'false', then cite the filing (accession
+> number). Statement: {entity}'s {metric} for the fiscal period ending
+> {period_end} was {value}."
+
+Gold is `true` at the as-filed value, or `false` with the value perturbed
+by 15–30%.
+
+**T3 forward estimation** — predict what will only be revealed later:
+
+> "As of {as_of}, estimate the {metric} of {entity} for the fiscal period
+> ending {period_end}, using only information that was public at that time.
+> Reply with a single number in USD."
+
+Gold is the realized value from the filing that first disclosed the period
+(`first_filed > as_of`), restatement-aware; the pair is constructed by a
+dedicated self-join so every T3 task has a realizable label. Public exports
+withhold T3 gold (`fintrace pitfall-export`).
 
 ## Appendix B. Reproduction
 

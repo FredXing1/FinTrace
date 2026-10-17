@@ -35,6 +35,49 @@ from fintrace.verify.verify import verify
 
 _BULK_TIMEOUT = 900.0  # big files over slow links
 
+_DATASET_CARD = (
+    "\n"
+    "# PITfall: a leakage-controlled point-in-time benchmark for financial LLM agents\n"
+    "\n"
+    "Deterministically generated from SEC EDGAR as-filed XBRL facts. Every task\n"
+    "carries an `as_of` date; the only correct answer to a task whose gold was not\n"
+    "public at `as_of` is \"unknown\". Forward-estimation (T3) gold values are\n"
+    "withheld from this export so the realized future cannot enter retrieval\n"
+    "corpora; the full generator is in the\n"
+    "[repository](https://github.com/FredXing1/FinTrace) and reproduces every\n"
+    "task byte-for-byte from public EDGAR data.\n"
+    "\n"
+    "## Files\n"
+    "\n"
+    "- `pool.jsonl` - full task pool (three families)\n"
+    "- `core-200.jsonl` - frozen evaluation subset (T1x100 incl. 17 unknown-gold\n"
+    "  probes / T2x60 / T3x40), sha256 in `manifest.json`\n"
+    "- `manifest.json` - generator version, seed, pool/core hashes\n"
+    "\n"
+    "## Task families\n"
+    "\n"
+    "| family | question shape | gold | metric |\n"
+    "|---|---|---|---|\n"
+    "| T1 time-gated QA | \"as of T, what was X for period P?\" "
+    "| filed <= T value, or `unknown` | 1% rel. tolerance |\n"
+    "| T2 claim verification | \"is this statement correct?\" "
+    "| verdict + evidence accn | verdict + citation |\n"
+    "| T3 forward estimation | \"as of T, estimate next-year X?\" "
+    "| realized value - **withheld** | APE <= 20% |\n"
+    "\n"
+    "## Scoring\n"
+    "\n"
+    "Deterministic pattern/numeric matching, no LLM judge; report per-family\n"
+    "accuracy with bootstrap 95% CIs and, for T1 unknown-gold probes, the leakage\n"
+    "rate (answers matching the realized future value). Harness: `fintrace\n"
+    "pitfall-run` / `fintrace pitfall-leak` / `fintrace pitfall-walkforward`.\n"
+    "\n"
+    "## License\n"
+    "\n"
+    "Apache-2.0. Source data: SEC EDGAR (public domain). This benchmark is a\n"
+    "measurement instrument; nothing in it is investment advice.\n"
+)
+
 
 def _cmd_download(args: argparse.Namespace) -> int:
     dest = raw_dir()
@@ -404,6 +447,7 @@ def _cmd_pitfall_export(args: argparse.Namespace) -> int:
     (out / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
     )
+    (out / "README.md").write_text(_DATASET_CARD.strip() + "\n", encoding="utf-8")
     print(f"exported {len(pool)} pool / {len(core)} core tasks to {out}")
     return 0
 
