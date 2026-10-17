@@ -311,6 +311,103 @@ def _cmd_pitfall_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_pitfall_walkforward(args: argparse.Namespace) -> int:
+    from fintrace.core.llm import MockLLM, OpenAICompatLLM
+    from fintrace.pitfall.ablate import ARMS, NEUTRAL_PROMPT
+    from fintrace.pitfall.model import read_jsonl
+    from fintrace.pitfall.walkforward import run_walkforward
+
+    tasks = read_jsonl(Path(args.tasks))
+    con = connect()
+    try:
+        llm: MockLLM | OpenAICompatLLM
+        if args.mock:
+            llm = MockLLM([])
+            model = "mock"
+        else:
+            llm = OpenAICompatLLM(model=args.model, timeout=args.timeout)
+            model = llm.model
+        arm = ARMS[args.arm]
+        if arm.prompt == "neutral":
+            from fintrace.pitfall.leak import ungated_question
+
+            tasks = [{**t, "question": ungated_question(t)} for t in tasks]
+        governor = BudgetGovernor(session="pitfall-walkforward")
+        store = PitStore(con)
+        tools: list[Tool] = (
+            pit_tools_ungated(store)
+            if arm.tools == "ungated"
+            else pit_tools(store)
+            if arm.tools == "gated"
+            else []
+        )
+
+        def run_fn(task: dict[str, Any]) -> str | None:
+            agent = Agent(
+                llm,
+                ToolBox(tools),
+                model=model,
+                governor=governor,
+                cache=ResponseCache(),
+                max_steps=arm.max_steps or args.max_steps,
+                system_prompt=NEUTRAL_PROMPT if arm.prompt == "neutral" else None,
+            )
+            try:
+                return agent.run(task["question"], as_of=task["as_of"], save_trace=False).answer
+            except RuntimeError as exc:
+                if "MockLLM" in str(exc):
+                    return None
+                raise
+
+        report = run_walkforward(
+            tasks,
+            run_fn,
+            start=args.start,
+            end=args.end,
+            step_days=args.step_days,
+            max_per_window=args.max_per_window,
+            ci_seed=args.seed,
+            store=store,
+        )
+    finally:
+        con.close()
+    report["arm"] = arm.name
+    summary = {k: v for k, v in report.items() if k != "windows"}
+    print(json.dumps(summary, ensure_ascii=False, indent=2))
+    if args.out:
+        Path(args.out).write_text(
+            json.dumps(report, ensure_ascii=False, indent=2, default=str), encoding="utf-8"
+        )
+    return 0
+
+
+def _cmd_pitfall_export(args: argparse.Namespace) -> int:
+    from fintrace.pitfall.model import read_jsonl, write_jsonl
+
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+
+    def withhold(task: dict[str, Any]) -> dict[str, Any]:
+        # forward-estimation gold is the realized future value: withheld at
+        # publish so the leaderboard stays scorable without leaking the label
+        # into retrieval corpora (task family, as_of and question are intact).
+        if task["family"] == "T3":
+            return {**task, "gold": {"kind": "forward", "gold_withheld": True}}
+        return task
+
+    pool = [withhold(t) for t in read_jsonl(Path(args.pool))]
+    core = [withhold(t) for t in read_jsonl(Path(args.core))]
+    write_jsonl(pool, out / "pool.jsonl")
+    write_jsonl(core, out / "core-200.jsonl")
+    manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
+    manifest["gold_withheld"] = "T3 gold values stripped at publish; request via issue"
+    (out / "manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    print(f"exported {len(pool)} pool / {len(core)} core tasks to {out}")
+    return 0
+
+
 def _cmd_pitfall_leak(args: argparse.Namespace) -> int:
     from fintrace.pitfall.leak import run_leak_audit
     from fintrace.pitfall.model import read_jsonl
@@ -580,6 +677,44 @@ def main(argv: list[str] | None = None) -> int:
     )
     p.add_argument("--out", default=None)
     p.set_defaults(func=_cmd_pitfall_leak)
+
+    p = sub.add_parser(
+        "pitfall-walkforward",
+        help="rolling shadow evaluation: slice tasks into as-of windows and run each",
+    )
+    p.add_argument("--tasks", required=True)
+    p.add_argument("--start", required=True, help="first window start YYYY-MM-DD")
+    p.add_argument("--end", required=True, help="window cover end (exclusive) YYYY-MM-DD")
+    p.add_argument("--step-days", type=int, default=365)
+    p.add_argument(
+        "--max-per-window",
+        type=int,
+        default=None,
+        help="deterministic stride sample per window (bounds runtime)",
+    )
+    p.add_argument("--mock", action="store_true")
+    p.add_argument("--model", default=None)
+    p.add_argument("--timeout", type=float, default=600.0)
+    p.add_argument("--max-steps", type=int, default=6)
+    p.add_argument(
+        "--arm",
+        default="full",
+        choices=sorted(_ARMS),
+        help="ablation arm to walk forward with (default: full)",
+    )
+    p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--out", default=None)
+    p.set_defaults(func=_cmd_pitfall_walkforward)
+
+    p = sub.add_parser(
+        "pitfall-export",
+        help="publish-ready dataset export: pool + core with T3 gold withheld",
+    )
+    p.add_argument("--pool", default="data/pitfall/pool.jsonl")
+    p.add_argument("--core", default="data/pitfall/core.jsonl")
+    p.add_argument("--manifest", default="data/pitfall/manifest.json")
+    p.add_argument("--out", default="dist/pitfall-dataset")
+    p.set_defaults(func=_cmd_pitfall_export)
 
     p = sub.add_parser(
         "demo-export", help="export a small DuckDB subset (star companies) for the hosted demo"
