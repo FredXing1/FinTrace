@@ -47,7 +47,7 @@ intelligence: on T1-positive tasks the naive agent is flat vs gated
 
 Reproduce: `fintrace pitfall-generate` → `pitfall-run` → `pitfall-leak`.
 
-## Quick start (human developers)
+## Quick start
 
 ```bash
 make onboard   # environment check + onboarding reading order
