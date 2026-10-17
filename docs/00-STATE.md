@@ -1,6 +1,6 @@
 # Status
 
-Last updated: 2026-10-01 | Phase: launched (repo public, hosted demo live) | Next: zero-API-cost local ablation matrix, report finalization
+Last updated: 2026-10-17 | Phase: **v1.0 — project complete** | Next: none (maintenance only)
 
 > Working notes for internal strategy/budget/session history are kept outside
 > the public repository; this file tracks public-facing status only.
@@ -55,19 +55,27 @@ Total LLM cost of both baseline runs: ≈ ¥4.4 (~$0.6).
 
 ## Roadmap
 
-- [x] technical report draft (`reports/technical-report.md`) — ablation section
-      pending local runs
-- [x] task pool expanded to 579 tasks; ungated naive-agent audit done
-- [x] hosted demo live: https://fintrace-demo.streamlit.app (zero-LLM time-travel
-      playground over a 28-company subset; AppTest regression suite in CI)
-- [x] ablation matrix (`fintrace pitfall-run --arm`, `scripts/ablation-local.sh`)
-      on local open-weights qwen2.5-7b, all six arms over frozen core-200 at
-      zero API cost: T1-null leakage 0% (full gate) vs 35% (prompt discipline
-      only) vs 6% (gate only) — structural tool gating is the load-bearing
-      layer; report analysis next
-- [ ] third-party agent framework audit (code-level, no LLM runs)
-- [ ] public dataset release (Hugging Face)
-- [ ] technical report finalization
+**Complete at v1.0.** Not carried forward (by scope decision, 2026-10-17):
+promotional writing (blog, video, community/leaderboard operations), RQ4
+return attribution (v1.x+). Maintenance only from here.
+
+- [x] technical report v1.0 (`reports/technical-report.md`) — measurements,
+      ablations, second-model replication, third-party audit, references
+- [x] task pool 579; three-configuration leakage audit; TradingAgents
+      v0.6.0 code-level PIT audit (`reports/tradingagents-audit.md`)
+- [x] hosted demo: https://fintrace-demo.streamlit.app (zero-LLM
+      time-travel playground; AppTest regression suite in CI)
+- [x] ablation matrix (`fintrace pitfall-run --arm`,
+      `scripts/ablation-local.sh`) on local open-weights models at zero API
+      cost: T1-null leakage 0% (full gate) vs 35% (prompt only) vs 6%
+      (gate only)
+- [x] rolling walk-forward shadow evaluation (`fintrace pitfall-walkforward`)
+- [x] dataset export with withheld T3 gold (`fintrace pitfall-export`;
+      HF upload is a maintainer action with a personal token)
+- [x] one-command deployment (`deploy/docker-compose.yml`: demo + docs +
+      Prometheus metrics) and documentation site (`mkdocs.yml`)
+- [x] monitoring: budget-ledger Prometheus exporter + Grafana dashboard
+      (`deploy/grafana-dashboard.json`)
 
 ## Note on scope
 
