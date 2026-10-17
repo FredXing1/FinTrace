@@ -239,6 +239,22 @@ genuinely identical prefixes are computed once; no cross-model contamination
 is possible because cache keys include the model name. Total ablation cost:
 ¥0 (local inference, ~7–10 s per task on an Apple M2).
 
+### 5.6 Third-party framework audit: TradingAgents v0.6.0
+
+The naive-agent pattern of §5.3 was modeled on TradingAgents, the most-
+referenced open-source multi-agent trading framework. A code-level audit of
+v0.6.0 (`reports/tradingagents-audit.md`) finds the framework has since
+shipped a genuine point-in-time layer — as-filed SEC EDGAR statements
+(`filed ≤ as_of`, restatement-aware), price paths bounded at the as-of date,
+FRED macro vintages, conservative news/social window filtering, and live
+snapshots withheld from historical runs. Remaining gaps: an unguarded
+identity-context surface (today's profile injected into every run), a
+withhold-not-serve posture that degrades historical backtests and invites
+users back to live-data mode, per-surface rather than structural time
+discipline, and no in-repo measurement that would catch a leakage regression.
+The audit is code-level only; we make no claim about behavior beyond the
+audited commit, and none of this is investment advice.
+
 ### 5.5 Second-model replication
 
 The leakage audit of §5.3 was replicated with GLM-4.7 (thinking disabled) as
@@ -282,8 +298,9 @@ questions they leave open]
 
 ## 9. Conclusion and Roadmap
 
-[rolling walk-forward evaluations; third-party framework audits; dataset and
-leaderboard release; ablative study of gating layers]
+[rolling walk-forward evaluations; third-party framework audits (TradingAgents
+v0.6.0 done, §5.6); dataset and leaderboard release; ablative study of gating
+layers done (§5.4)]
 
 ## References
 
