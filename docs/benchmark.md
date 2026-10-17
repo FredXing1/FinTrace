@@ -20,7 +20,7 @@ future is provable look-ahead leakage.
 T3 windows anchor on *first-filed* dates — last-filed is polluted by
 comparative-period restatements, which would invert the window. T3 gold
 values are withheld from the public dataset export
-([HF dataset](https://huggingface.co/datasets/FredXing1/pitfall), or
+([HF dataset](https://huggingface.co/datasets/Fredxing/pitfall), or
 `fintrace pitfall-export` to build it locally); the generator reproduces
 everything from public EDGAR data.
 

@@ -36,6 +36,22 @@ from fintrace.verify.verify import verify
 _BULK_TIMEOUT = 900.0  # big files over slow links
 
 _DATASET_CARD = (
+    "---\n"
+    "license: apache-2.0\n"
+    "language:\n"
+    "- en\n"
+    "task_categories:\n"
+    "- question-answering\n"
+    "tags:\n"
+    "- finance\n"
+    "- benchmark\n"
+    "- leakage\n"
+    "- point-in-time\n"
+    "- sec-edgar\n"
+    "- llm-agents\n"
+    "size_category:\n"
+    "- 1K<n<10K\n"
+    "---\n"
     "\n"
     "# PITfall: a leakage-controlled point-in-time benchmark for financial LLM agents\n"
     "\n"
