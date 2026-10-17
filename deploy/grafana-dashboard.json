@@ -1,0 +1,54 @@
+{
+  "title": "FinTrace budget & runs",
+  "uid": "fintrace-budget",
+  "schemaVersion": 36,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-7d", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Lifetime LLM spend (RMB)",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+      "targets": [{ "expr": "fintrace_spend_rmb_total", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyCNY",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1800 },
+              { "color": "red", "value": 2550 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "title": "Budget cap (RMB)",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 4, "x": 8, "y": 0 },
+      "targets": [{ "expr": "fintrace_spend_cap_rmb", "refId": "A" }]
+    },
+    {
+      "id": 3,
+      "title": "Recorded LLM calls",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 4, "x": 12, "y": 0 },
+      "targets": [{ "expr": "fintrace_ledger_calls_total", "refId": "A" }]
+    },
+    {
+      "id": 4,
+      "title": "Spend by session (RMB)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 6 },
+      "targets": [
+        { "expr": "fintrace_spend_rmb", "legendFormat": "{{session}}", "refId": "A" }
+      ]
+    }
+  ]
+}

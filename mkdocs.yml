@@ -1,0 +1,27 @@
+site_name: FinTrace
+site_description: Auditable, point-in-time financial research agents & the PITfall leakage-controlled benchmark
+repo_url: https://github.com/FredXing1/FinTrace
+repo_name: FredXing1/FinTrace
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+  features:
+    - content.code.copy
+    - navigation.footer
+
+nav:
+  - Home: index.md
+  - Quick start: quickstart.md
+  - PITfall benchmark: benchmark.md
+  - Ablations: ablations.md
+  - Audit trail (auditpack): auditpack.md
+  - Project status: 00-STATE.md
+
+markdown_extensions:
+  - admonition
+  - tables
+  - pymdownx.superfences
+  - pymdownx.details
